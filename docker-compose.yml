@@ -1,0 +1,61 @@
+version: '3'
+
+networks:
+  # Allow the use of traefik in other docker-compose.yml files
+  traefik:
+    external: true
+
+services:
+  traefik:
+    # The official v2 Traefik docker image
+    image: traefik:v2.10
+    container_name: traefik
+    # Enables the web UI and tells Traefik to listen to docker
+    command:
+      - "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.file.directory=/etc/traefik/dynamic_config"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--certificatesresolvers.myresolver.acme.httpchallenge=true"
+      - "--certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.myresolver.acme.email=kolk.peeter@gmail.com"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+      - "--log.filePath=/etc/traefik/traefik.log"
+      - "--accessLog.filePath=/etc/traefik/access.log"
+    ports:
+      # The HTTP port
+      - "80:80"
+      - "443:443"
+      # The Web UI (enabled by --api.insecure=true)
+      - "8080:8080"
+    volumes:
+      # So that Traefik can listen to the Docker events
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./traefik:/etc/traefik
+      - ./letsencrypt:/letsencrypt
+    restart: unless-stopped
+    networks:
+      - "traefik"
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    ports:
+      - 80
+    volumes:
+      - ./websites:/usr/share/nginx
+      - ./nginx:/etc/nginx
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nginx.rule=Host(`bomberman.stackoverlord.dev`)"
+      - "traefik.port=80"
+      - "traefik.http.routers.nginx.entrypoints=websecure"
+      - "traefik.http.routers.nginx.tls.certresolver=myresolver"
+      - "traefik.http.routers.nginx.tls=true"
+      - "traefik.http.routers.nginx.middlewares=redirect-to-non-www@file"
+    networks:
+      - "traefik"

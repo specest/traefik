@@ -1,0 +1,11 @@
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    
+http:
+  middlewares:
+    redirect-to-non-www:
+      redirectRegex:
+        regex: "^https?://www\\.(.+)"
+        replacement: "https://${1}"
+        permanent: true
