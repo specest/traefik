@@ -8,6 +8,8 @@ networks:
 services:
   traefik:
     # The official v2 Traefik docker image
+    env_file:
+      - ./.env
     image: traefik:v2.10
     container_name: traefik
     # Enables the web UI and tells Traefik to listen to docker
@@ -23,7 +25,7 @@ services:
       - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
       - "--certificatesresolvers.myresolver.acme.httpchallenge=true"
       - "--certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web"
-      - "--certificatesresolvers.myresolver.acme.email=kolk.peeter@gmail.com"
+      - "--certificatesresolvers.myresolver.acme.email=(`${EMAIL}`)"
       - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
       - "--log.filePath=/etc/traefik/traefik.log"
       - "--accessLog.filePath=/etc/traefik/access.log"
@@ -44,6 +46,8 @@ services:
   nginx:
     image: nginx:alpine
     container_name: nginx
+    env_file:
+      - ./.env
     ports:
       - 80
     volumes:
@@ -51,7 +55,7 @@ services:
       - ./nginx:/etc/nginx
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.nginx.rule=Host(`bomberman.stackoverlord.dev`)"
+      - "traefik.http.routers.nginx.rule=Host(`${SUBDOMAIN}`)"
       - "traefik.port=80"
       - "traefik.http.routers.nginx.entrypoints=websecure"
       - "traefik.http.routers.nginx.tls.certresolver=myresolver"
